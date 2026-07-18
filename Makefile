@@ -12,3 +12,14 @@ help:
 
 clean-cache: ## Удалить все __pycache__ директории
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# ====================== DATABASE ======================
+
+migrate: ## Применить миграции до последней (alembic upgrade head)
+	poetry run alembic upgrade head
+
+downgrade: ## Откатить последнюю миграцию (alembic downgrade -1)
+	poetry run alembic downgrade -1
+
+revision: ## Сгенерировать миграцию из моделей: make revision m="описание"
+	poetry run alembic revision --autogenerate -m "$(m)"
