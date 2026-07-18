@@ -1,7 +1,7 @@
 [project]
-name = "market-manager-backend"
+name = "5element-chat-backend"
 version = "0.0.1"
-description = "API Market Manager"
+description = "API Chat for 5 Element test task"
 authors = [
     { name = "firstConsole",email = "artamonov008@yandex.ru" }
 ]
@@ -26,7 +26,17 @@ pyyaml = "6.0.3"
 python-multipart = "0.0.32"
 alembic = "1.18.5"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "8.3.4"
+pytest-asyncio = "0.25.3"
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["src"]
+testpaths = ["tests"]
