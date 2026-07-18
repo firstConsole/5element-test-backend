@@ -1,0 +1,17 @@
+# Конфигурация LLM-провайдера
+# Скопируйте в config/llm.yaml и отредактируйте под свой провайдер.
+# Секрет api_key задаётся через переменную окружения LLM_API_KEY (.env),
+# а не здесь — чтобы не попадал в репозиторий.
+
+llm:
+  provider: ollama                     # ollama | openai
+  base_url: http://localhost:11434     # адрес экземпляра провайдера
+  model: llama3                        # модель по умолчанию
+  timeout: 60                          # таймаут запроса к провайдеру, сек
+
+# Пример для внешнего OpenAI-совместимого API:
+# llm:
+#   provider: openai
+#   base_url: https://api.openai.com/v1
+#   model: gpt-4o-mini
+#   timeout: 60
