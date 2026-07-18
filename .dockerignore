@@ -1,0 +1,25 @@
+# VCS / IDE
+.git
+.gitignore
+.idea
+.vscode
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Локальные данные и секреты
+*.db
+.env
+*.env
+
+# Тесты и документация в образ не нужны
+tests/
+BACKEND.md

@@ -1,4 +1,4 @@
-.PHONY: help clean-cache up build down
+.PHONY: help clean-cache migrate downgrade revision test up build down
 
 GREEN  := $(shell tput -Txterm setaf 2)
 YELLOW := $(shell tput -Txterm setaf 3)
@@ -12,3 +12,30 @@ help:
 
 clean-cache: ## Удалить все __pycache__ директории
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+# ====================== DATABASE ======================
+
+migrate: ## Применить миграции до последней (alembic upgrade head)
+	poetry run alembic upgrade head
+
+downgrade: ## Откатить последнюю миграцию (alembic downgrade -1)
+	poetry run alembic downgrade -1
+
+revision: ## Сгенерировать миграцию из моделей: make revision m="описание"
+	poetry run alembic revision --autogenerate -m "$(m)"
+
+# ====================== TESTS ======================
+
+test: ## Запустить тесты (pytest)
+	poetry run pytest
+
+# ====================== DOCKER ======================
+
+build: ## Собрать образ backend
+	docker compose build
+
+up: ## Поднять backend в Docker (http://localhost:8000/docs)
+	docker compose up -d
+
+down: ## Остановить контейнеры
+	docker compose down

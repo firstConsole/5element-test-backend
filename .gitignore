@@ -23,3 +23,6 @@ poetry.lock
 .idea/
 .vscode/
 *.iml
+
+# Files
+*.db
