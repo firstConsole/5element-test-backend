@@ -14,7 +14,14 @@ from backend.models.chat import Chat
 from backend.models.message import Message, MessageRole
 from backend.repositories.message_repository import MessageRepository
 from backend.schemas.message import MessageCreate, MessageRead
-from backend.services.llm import ChatMessage, LLMError, LLMProvider, get_llm_provider
+from backend.services.llm import (
+    ChatMessage,
+    LLMError,
+    LLMProvider,
+    default_registry,
+    get_llm_provider,
+    run_with_tools,
+)
 
 router = APIRouter(prefix="/chats/{chat_id}/messages", tags=["Сообщения"])
 
@@ -74,6 +81,40 @@ async def send_message(
     return assistant
 
 
+@router.post("/tools", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
+async def send_message_with_tools(
+    data: MessageCreate,
+    chat: Chat = Depends(get_owned_chat),
+    session: AsyncSession = Depends(get_session),
+    provider: LLMProvider = Depends(get_llm_provider),
+) -> Message:
+    """Отправить сообщение с включённым tool calling"""
+
+    repo = MessageRepository(session)
+
+    await repo.add(chat.id, MessageRole.user, data.content)
+    
+    history = await repo.list_by_chat(chat.id)
+
+    try:
+        answer = await run_with_tools(
+            provider,
+            _to_chat_messages(history),
+            registry=default_registry(),
+            model=data.model,
+        )
+
+    except LLMError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Ошибка LLM-провайдера: {exc}",
+        ) from exc
+
+    assistant = await repo.add(chat.id, MessageRole.assistant, answer)
+    await _touch_chat(session, chat)
+    return assistant
+
+
 @router.post("/stream")
 async def send_message_stream(
     data: MessageCreate,
@@ -81,8 +122,6 @@ async def send_message_stream(
     session: AsyncSession = Depends(get_session),
     provider: LLMProvider = Depends(get_llm_provider),
 ) -> StreamingResponse:
-    """То же, что POST выше, но ответ модели отдаётся потоком (SSE)"""
-
     repo = MessageRepository(session)
 
     await repo.add(chat.id, MessageRole.user, data.content)

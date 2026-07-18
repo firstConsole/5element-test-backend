@@ -5,7 +5,15 @@ import httpx
 
 from collections.abc import AsyncIterator
 
-from backend.services.llm.base import ChatMessage, LLMError, LLMProvider
+from typing import Any
+
+from backend.services.llm.base import (
+    ChatMessage,
+    ChatResult,
+    LLMError,
+    LLMProvider,
+    ToolCall,
+)
 
 
 class OllamaProvider(LLMProvider):
@@ -84,3 +92,60 @@ class OllamaProvider(LLMProvider):
             raise LLMError(f"Не удалось получить список моделей Ollama: {exc}") from exc
 
         return [m["name"] for m in data.get("models", []) if "name" in m]
+
+    async def chat(
+        self,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatResult:
+        payload: dict[str, Any] = {
+            "model": model or self.model,
+            "messages": messages,
+            "stream": False,
+        }
+
+        if tools:
+            payload["tools"] = tools
+
+        try:
+            async with self._client() as client:
+                resp = await client.post("/api/chat", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+
+        except httpx.HTTPStatusError as exc:
+            raise LLMError(
+                f"Ollama вернул {exc.response.status_code}: {exc.response.text}"
+            ) from exc
+        
+        except httpx.HTTPError as exc:
+            raise LLMError(f"Не удалось связаться с Ollama: {exc}") from exc
+
+        message = data.get("message", {})
+        tool_calls = []
+
+        for i, call in enumerate(message.get("tool_calls") or []):
+            fn = call.get("function", {})
+            arguments = fn.get("arguments") or {}
+
+            if isinstance(arguments, str):
+                arguments = json.loads(arguments)
+            tool_calls.append(
+                ToolCall(id=str(i), name=fn.get("name", ""), arguments=arguments)
+            )
+
+        return ChatResult(content=message.get("content") or "", tool_calls=tool_calls)
+
+    def format_assistant_tool_calls(self, result: ChatResult) -> dict[str, Any]:
+        return {
+            "role": "assistant",
+            "content": result.content or "",
+            "tool_calls": [
+                {"function": {"name": tc.name, "arguments": tc.arguments}}
+                for tc in result.tool_calls
+            ],
+        }
+
+    def format_tool_result(self, call: ToolCall, output: str) -> dict[str, Any]:
+        return {"role": "tool", "content": output}

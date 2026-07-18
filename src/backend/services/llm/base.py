@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from typing import TypedDict
+from dataclasses import dataclass, field
+from typing import Any, TypedDict
 
 import httpx
 
@@ -16,8 +18,21 @@ class LLMError(Exception):
     ...
 
 
+@dataclass
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass
+class ChatResult:
+    content: str
+    tool_calls: list[ToolCall] = field(default_factory=list)
+
+
 class LLMProvider(ABC):
-    """Единый интерфейс LLM-провайдера"""
+    """Интерфейс LLM-провайдера"""
     
     name: str = "base"
 
@@ -73,3 +88,34 @@ class LLMProvider(ABC):
     @abstractmethod
     async def list_models(self) -> list[str]:
         ...
+
+    async def chat(
+        self,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatResult:
+        raise LLMError(f"Провайдер {self.name} не поддерживает tool calling")
+
+    def format_assistant_tool_calls(self, result: ChatResult) -> dict[str, Any]:
+        """Сообщение ассистента с запросами вызовов (OpenAI-совместимый формат)."""
+        return {
+            "role": "assistant",
+            "content": result.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.name,
+                        "arguments": json.dumps(tc.arguments, ensure_ascii=False),
+                    },
+                }
+                for tc in result.tool_calls
+            ],
+        }
+
+    def format_tool_result(self, call: ToolCall, output: str) -> dict[str, Any]:
+        return {"role": "tool", 
+                "tool_call_id": call.id, 
+                "content": output}
