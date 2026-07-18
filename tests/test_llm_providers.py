@@ -91,4 +91,5 @@ async def test_openai_tool_calling_loop():
     result = await run_with_tools(
         p, [{"role": "user", "content": "посчитай"}], default_registry()
     )
-    assert result == "Готово: 22"
+    assert result.content == "Готово: 22"
+    assert result.tools_used == ["calculate"]

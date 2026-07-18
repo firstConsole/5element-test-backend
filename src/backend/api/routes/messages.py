@@ -13,7 +13,7 @@ from backend.core.database import get_session
 from backend.models.chat import Chat
 from backend.models.message import Message, MessageRole
 from backend.repositories.message_repository import MessageRepository
-from backend.schemas.message import MessageCreate, MessageRead
+from backend.schemas.message import MessageCreate, MessageRead, MessageWithTools
 from backend.services.llm import (
     ChatMessage,
     LLMError,
@@ -81,23 +81,31 @@ async def send_message(
     return assistant
 
 
-@router.post("/tools", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/tools",
+    response_model=MessageWithTools,
+    status_code=status.HTTP_201_CREATED,
+)
 async def send_message_with_tools(
     data: MessageCreate,
     chat: Chat = Depends(get_owned_chat),
     session: AsyncSession = Depends(get_session),
     provider: LLMProvider = Depends(get_llm_provider),
-) -> Message:
-    """Отправить сообщение с включённым tool calling"""
+) -> MessageWithTools:
+    """Отправить сообщение с включённым tool calling.
+
+    Возвращает ответ ассистента и список инструментов, которые модель
+    фактически вызвала в процессе генерации.
+    """
 
     repo = MessageRepository(session)
 
     await repo.add(chat.id, MessageRole.user, data.content)
-    
+
     history = await repo.list_by_chat(chat.id)
 
     try:
-        answer = await run_with_tools(
+        result = await run_with_tools(
             provider,
             _to_chat_messages(history),
             registry=default_registry(),
@@ -110,9 +118,12 @@ async def send_message_with_tools(
             detail=f"Ошибка LLM-провайдера: {exc}",
         ) from exc
 
-    assistant = await repo.add(chat.id, MessageRole.assistant, answer)
+    assistant = await repo.add(chat.id, MessageRole.assistant, result.content)
     await _touch_chat(session, chat)
-    return assistant
+
+    response = MessageWithTools.model_validate(assistant, from_attributes=True)
+    response.tools_used = result.tools_used
+    return response
 
 
 @router.post("/stream")
