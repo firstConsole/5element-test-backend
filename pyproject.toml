@@ -19,7 +19,8 @@ pydantic-settings = "2.14.2"
 sqlalchemy = "2.0.51"
 aiosqlite = "0.22.1"
 python-jose = {extras = ["cryptography"], version = "3.5.0"}
-passlib = {extras = ["bcrypt"], version = "1.7.4"}
+bcrypt = "5.0.0"
+email-validator = "2.3.0"
 httpx = "0.28.1"
 pyyaml = "6.0.3"
 python-multipart = "0.0.32"
