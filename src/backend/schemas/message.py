@@ -19,3 +19,9 @@ class MessageRead(BaseModel):
     role: MessageRole
     content: str
     created_at: datetime
+
+
+class MessageWithTools(MessageRead):
+    """Ответ ассистента + имена инструментов, вызванных при генерации."""
+
+    tools_used: list[str] = []

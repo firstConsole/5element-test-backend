@@ -31,4 +31,6 @@ async def test_message_with_tools(client, auth_headers):
     )
     assert resp.status_code == 201
     # Fake-провайдер вызывает calculate -> реальный инструмент считает 22.
-    assert resp.json()["content"] == "Итог: 22"
+    body = resp.json()
+    assert body["content"] == "Итог: 22"
+    assert body["tools_used"] == ["calculate"]
