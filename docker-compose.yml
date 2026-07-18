@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: .
+    container_name: 5element-chat-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # SQLite-файл кладём в volume для сохранения данных между перезапусками контейнера
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/app.db
+    volumes:
+      - backend-data:/app/data
+      # Конфиг LLM редактируется снаружи без пересборки образа.
+      - ./config:/app/config:ro
+    restart: unless-stopped
+
+  # Опциональный локальный Ollama. Запуск: docker compose --profile ollama up
+  # При использовании укажите в config/llm.yaml: base_url: http://ollama:11434
+  ollama:
+    image: ollama/ollama:0.32.1
+    container_name: 5element-ollama
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+  ollama-data:

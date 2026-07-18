@@ -2,6 +2,6 @@
 
 llm:
   provider: ollama                     # ollama | openai
-  base_url: http://localhost:11434     # адрес экземпляра провайдера
+  base_url: http://ollama:11434        # адрес экземпляра провайдера
   model: llama3                        # модель по умолчанию
   timeout: 60                          # таймаут запроса к провайдеру, сек
